@@ -42,11 +42,22 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += \
+        cmainscreen.cpp \
+        cmonkeyboard.cpp \
+        csettingsscreen.cpp \
         main.cpp \
         cmainwindow.cpp
 
 HEADERS += \
-        cmainwindow.h
+        cmainscreen.h \
+        cmainwindow.h \
+        cmonkeyboard.h \
+        csettingsscreen.h
 
 FORMS += \
-        cmainwindow.ui
+        cmainscreen.ui \
+        cmainwindow.ui \
+        csettingsscreen.ui
+
+RESOURCES += \
+    monkeyRadio.qrc

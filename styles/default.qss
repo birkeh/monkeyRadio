@@ -1,0 +1,85 @@
+/* QWidget ---------------------------------------------------------------- */
+
+QWidget {
+    background-color: #19232D;
+    border: 0px solid #32414B;
+    padding: 0px;
+    color: #F0F0F0;
+    selection-background-color: #1464A0;
+    selection-color: #F0F0F0;
+    font: 16pt "MS Shell Dlg 2";
+}
+
+/* QListView ---------------------------------------------------------------- */
+
+QListView {
+    background-color: #0000FF;
+    border: 0px solid #32414B;
+    padding: 0px;
+    color: #F0F0F0;
+    selection-background-color: #1464A0;
+    selection-color: #F0F0F0;
+    font-weight: bold;
+}
+
+QListView::item:selected {
+    color: #FFFF00;
+}
+
+/* QToolButton ---------------------------------------------------------------- */
+
+QToolButton {
+    background-color: transparent;
+    border: 1px solid #32414B;
+    border-radius: 4px;
+    margin: 0px;
+    padding: 2px;
+}
+
+QToolButton:checked {
+    color: #FFFF00;
+    border: 1px solid #19232D;
+}
+
+QToolButton:disabled {
+    border: 1px solid #32414B;
+}
+
+QToolButton:hover,
+QToolButton:checked:hover{
+    border: 0px;
+}
+
+/* QRadioButton ----------------------------------------------------------- */
+
+
+QRadioButton {
+    background-color: transparent;
+    border: 0px;
+    border-radius: 4px;
+    margin: 0px;
+    padding: 2px;
+}
+
+QRadioButton:checked {
+    color: #FFFF00;
+    border: 0px;
+}
+
+QRadioButton:disabled {
+    border: 0px;
+}
+
+QRadioButton:hover,
+QRadioButton:checked:hover{
+    border: 0px;
+}
+
+
+QRadioButton::indicator {
+    border: 0px;
+    outline: 0px;
+    margin-bottom: 0px;
+    width: 0px;
+    height: 0px;
+}
