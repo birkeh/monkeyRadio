@@ -13,7 +13,11 @@ cMainWindow::cMainWindow(QWidget *parent) :
 {
 	ui->setupUi(this);
 
+#ifdef __linux__
+	m_lpMonkeyBoard	= new cMonkeyBoard("/dev/ttyACM0", this);
+#else
 	m_lpMonkeyBoard	= new cMonkeyBoard("\\\\.\\COM4", this);
+#endif
 
 	if(!m_lpMonkeyBoard->isValid())
 		return;
