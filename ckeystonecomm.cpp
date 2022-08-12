@@ -54,6 +54,7 @@ cKeyStoneCOMM::cKeyStoneCOMM(const QString& commPort, QObject *parent) :
 	m_hardMute{false},
 	m_initialized{false},
 	m_totalProgram{0},
+	m_currentProgram{0},
 	m_mutePrevVolume{0}
 {
 }
@@ -248,7 +249,15 @@ bool cKeyStoneCOMM::startStream(STREAM_MODE mode, uint16_t channel)
 	if(!readSerialBytes(input, &dwBytes))
 		return(false);
 
+	m_currentProgram	= channel;
+	m_currentMode		= mode;
+
 	return(true);
+}
+
+int16_t cKeyStoneCOMM::channel()
+{
+	return(m_currentProgram);
 }
 
 bool cKeyStoneCOMM::stopStream()
@@ -446,8 +455,21 @@ int8_t cKeyStoneCOMM::volume()
 
 int8_t cKeyStoneCOMM::signalStrength()
 {
-	int	biterror;
-	return(getSignalStrength(&biterror));
+	int		biterror;
+	int8_t	signalStrength	= getSignalStrength(&biterror);
+	if(signalStrength < 0)
+		signalStrength	= 0;
+	return(signalStrength);
+}
+
+QString cKeyStoneCOMM::programName()
+{
+	return(getProgramName(m_currentMode, m_currentProgram, 1));
+}
+
+QString cKeyStoneCOMM::programText()
+{
+	return(getProgramText());
 }
 
 bool cKeyStoneCOMM::hardMute()
@@ -764,6 +786,179 @@ int8_t cKeyStoneCOMM::getSignalStrength(int* biterror)
 	}
 	else
 		return(-1);
+}
+
+QString cKeyStoneCOMM::getProgramText()
+{
+	uint16_t		dwBytes;
+	unsigned char	input[TEXT_BUFFER_LEN]	= {0};
+	unsigned char	output[]				= {HEAD,0x01,0x2E,0x01,0x00,0x00,END};
+	QString			programText;
+
+	if(!writeSerialBytes(output, 7, &dwBytes))
+		return(programText);
+
+	if(dwBytes != 7)
+		return(programText);
+
+	if(!readSerialBytes(input, &dwBytes))
+		return(programText);
+
+	if(dwBytes < 8)
+		return(programText);
+
+	if(goodHeader(input, dwBytes))
+	{
+		if((input[1] == 0x01) && (input[2] == 0x2E))
+		{
+			int		textLen		= (0xFF & input[4]) << 8 |(0xFF & input[5]);
+
+			if(textLen > TEXT_BUFFER_LEN-1)
+				return(programText);	// buffer overrun
+
+			int		unicodesize	= textLen/2;
+			char	front;
+
+			for(int i = 0;i < textLen;i += 2)  // WATCHOUT
+			{
+				front			= input[6+i];
+				input[6+i]		= input[6+i+1];
+				input[6+i+1]	= front;
+			}
+#ifdef WIN32
+			programText	= QString::fromWCharArray((wchar_t *)&input[6], unicodesize-1).trimmed();
+
+#ifdef LABVIEW
+			int asciilen=WideCharToMultiByte(CP_ACP, 0, programText, unicodesize-1, NULL,0,NULL,NULL);
+			char *asciitext = new char[asciilen+1];
+			WideCharToMultiByte(CP_ACP, 0, programText, unicodesize-1, asciitext, asciilen, NULL, NULL);
+			asciitext[asciilen]=0;
+			memset((char*)programText,0, asciilen+1);
+			memcpy((char*)programText, asciitext, asciilen);
+			delete asciitext;
+#endif
+
+#endif
+
+#ifdef __linux__
+			unsigned char tempBuffer[TEXT_BUFFER_LEN*4]={0};
+
+			for(int i=0; i< unicodesize;i++)
+			{
+				tempBuffer[i*4]=input[6+(i*2)];
+				tempBuffer[(i*4)+1]=input[6+(i*2)+1];
+				tempBuffer[(i*4)+2]=0;
+				tempBuffer[(i*4)+3]=0;
+			}
+
+			programText	= QString::fromWCharArray((wchar_t *)&tempBuffer[0], unicodesize-1).trimmed();
+#endif
+			return(0);
+
+		}
+		else if((input[1] == 0x00) && (input[2] == 0x02))
+		{
+			if(input[6] == 0x01)
+				return(programText);
+			else
+				return(programText);
+		}
+		else
+			return(programText);
+	}
+	else
+		return(programText);
+}
+
+QString cKeyStoneCOMM::getProgramName(char mode, long dabIndex, char namemode)
+{
+	uint16_t		dwBytes;
+	unsigned char	input[50]		= {0};
+	unsigned char	output[]		= {HEAD,0x01,0x2D,0x01,0x00,0x05,0xFF,0xFF,0xFF,0xFF,0x01,END};
+	unsigned char	strChannel[4]	= {0};
+	QString			programName;
+
+	if((mode != STREAM_MODE_DAB) && (mode != STREAM_MODE_FM))
+		return(programName);
+
+	if(mode == STREAM_MODE_DAB)
+	{
+		memcpy(&strChannel[0], &dabIndex, sizeof(long));
+		output[6]	= strChannel[3];
+		output[7]	= strChannel[2];
+		output[8]	= strChannel[1];
+		output[9]	= strChannel[0];
+	}
+
+	output[10]		= namemode;
+
+	if(!writeSerialBytes(output, 12, &dwBytes))
+		return(programName);
+
+	if(dwBytes != 12)
+		return(programName);
+
+	if(!readSerialBytes(input, &dwBytes))
+		return(programName);
+
+	if(dwBytes < 8)
+		return(programName);
+
+	if(goodHeader(input, dwBytes))
+	{
+		if((input[1] == 0x01) && (input[2] == 0x2D))
+		{
+			int		textLen		= (int)input[5];
+
+			if(textLen > 50)
+				return(programName);		// prevent buffer overrun
+
+			int		unicodesize	= textLen/2;
+			char	front;
+
+			for(int i = 0;i < textLen;i += 2)
+			{
+				front			= input[6+i];
+				input[6+i]		= input[6+i+1];
+				input[6+i+1]	= front;
+			}
+
+#ifdef WIN32
+			programName	= QString::fromWCharArray((wchar_t*)&input[6], unicodesize-1).trimmed();
+
+#ifdef LABVIEW
+			int asciilen=WideCharToMultiByte(CP_ACP, 0, programName, unicodesize-1, NULL,0,NULL,NULL);
+			char *asciitext = new char[asciilen+1];
+			WideCharToMultiByte(CP_ACP, 0, programName, unicodesize-1, asciitext, asciilen, NULL, NULL);
+			asciitext[asciilen]=0;
+			memset((char*)programName,0, asciilen+1);
+			memcpy((char*)programName, asciitext, asciilen);
+			delete asciitext;
+#endif
+
+#endif
+
+#ifdef __linux__
+			unsigned char tempBuffer[TEXT_BUFFER_LEN*4]={0};
+
+			for(int i=0; i< unicodesize;i++)
+			{
+				tempBuffer[i*4]=input[6+(i*2)];
+				tempBuffer[(i*4)+1]=input[6+(i*2)+1];
+				tempBuffer[(i*4)+2]=0;
+				tempBuffer[(i*4)+3]=0;
+			}
+
+			programName	= QString::fromWCharArray((wchar_t *)&tempBuffer[0], unicodesize-1).trimmed();
+#endif
+			return(programName);
+
+		}
+		else
+			return(programName);
+	}
+	else
+		return(programName);
 }
 
 void cKeyStoneCOMM::serialReadReady()

@@ -35,4 +35,33 @@ void cMainWindow::updateSignalStrength()
 {
 	int8_t	signalStrength	= m_keystoneCOMM->signalStrength();
 	ui->m_signalStrength->setText(QString("%1").arg(signalStrength));
+	ui->m_sender->setText(m_keystoneCOMM->programName());
+	ui->m_text->setText(m_keystoneCOMM->programText());
+	int16_t	channel			= m_keystoneCOMM->channel();
+	ui->m_channel->setText(QString("%1").arg(channel));
+	int8_t	volume			= m_keystoneCOMM->volume();
+	ui->m_volume->setText(QString("%1").arg(volume));
 }
+
+void cMainWindow::on_m_channelDown_clicked()
+{
+	m_keystoneCOMM->prevStream();
+}
+
+
+void cMainWindow::on_m_channelUp_clicked()
+{
+	m_keystoneCOMM->nextStream();
+}
+
+void cMainWindow::on_m_volumeDown_clicked()
+{
+	m_keystoneCOMM->volumeMinus();
+}
+
+
+void cMainWindow::on_m_volumeUp_clicked()
+{
+	m_keystoneCOMM->volumePlus();
+}
+

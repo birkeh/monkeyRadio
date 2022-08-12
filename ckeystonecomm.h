@@ -8,6 +8,9 @@
 #include <QSerialPortInfo>
 
 
+#define TEXT_BUFFER_LEN 300
+
+
 class cKeyStoneCOMM : public QObject
 {
 	Q_OBJECT
@@ -27,6 +30,7 @@ public:
 	void							close();
 
 	int16_t							channelCount();
+	int16_t							channel();
 	STREAM_MODE						playMode();
 	int16_t							playIndex();
 	bool							setVolume(int8_t volume);
@@ -39,6 +43,8 @@ public:
 	void							volumeMute();
 	int8_t							volume();
 	int8_t							signalStrength();
+	QString							programName();
+	QString							programText();
 signals:
 
 private:
@@ -54,12 +60,17 @@ private:
 	int								m_cntReadData;
 
 	uint16_t						m_totalProgram;
+	uint16_t						m_currentProgram;
+	STREAM_MODE						m_currentMode;
 	int8_t							m_currentVolume;
 	int8_t							m_mutePrevVolume;
 
 	bool							hardMute();
 	bool							hardUnmute();
 	bool							hardResetRadio();
+
+	QString							getProgramText();
+	QString							getProgramName(char mode, long dabIndex, char namemode);
 
 	bool							readSerialBytes (unsigned char* buffer, uint16_t* bytesreadreturn);
 	bool							writeSerialBytes(unsigned char* buffer, uint16_t nNumberOfBytesToWrite, uint16_t* lpNumberOfBytesWritten);

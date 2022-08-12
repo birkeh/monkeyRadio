@@ -27,6 +27,11 @@ private:
 
 public slots:
 	void				updateSignalStrength();
+private slots:
+	void on_m_channelDown_clicked();
+	void on_m_channelUp_clicked();
+	void on_m_volumeDown_clicked();
+	void on_m_volumeUp_clicked();
 };
 
 #endif // CMAINWINDOW_H
