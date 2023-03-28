@@ -2,6 +2,9 @@
 #include "ui_cmainwindow.h"
 
 
+#define REFRESH_RATE	1000
+
+
 cMainWindow::cMainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::cMainWindow),
@@ -14,9 +17,10 @@ cMainWindow::cMainWindow(QWidget *parent) :
 
 	m_timerSignalStrength	= new QTimer(this);
 	connect(m_timerSignalStrength, &QTimer::timeout, this, &cMainWindow::updateSignalStrength);
-	m_timerSignalStrength->start(1000);
+	m_timerSignalStrength->start(REFRESH_RATE);
 
 	m_keystoneCOMM->open();
+
 	m_keystoneCOMM->startStream(cKeyStoneCOMM::STREAM_MODE_DAB, 2);
 }
 
@@ -36,6 +40,7 @@ void cMainWindow::updateSignalStrength()
 	int8_t	signalStrength	= m_keystoneCOMM->signalStrength();
 	ui->m_signalStrength->setText(QString("%1").arg(signalStrength));
 	ui->m_sender->setText(m_keystoneCOMM->programName());
+	ui->m_type->setText(m_keystoneCOMM->programType());
 	ui->m_text->setText(m_keystoneCOMM->programText());
 	int16_t	channel			= m_keystoneCOMM->channel();
 	ui->m_channel->setText(QString("%1").arg(channel));
@@ -65,3 +70,7 @@ void cMainWindow::on_m_volumeUp_clicked()
 	m_keystoneCOMM->volumePlus();
 }
 
+void cMainWindow::on_m_clearDAB_clicked()
+{
+	m_keystoneCOMM->clearDAB();
+}

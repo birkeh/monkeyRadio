@@ -13,12 +13,6 @@
 #define HEAD	0xFE
 #define END		0xFD
 
-#define MSC_DATA_LENGTH			(100 * 1024)
-#define MAX_SEGMENT_SIZE		8191
-#define MAX_IMAGE_SIZE			100 * 1024	// bytes, ETSI TS 101 499
-#define MAX_NAME_LENGTH			100
-#define EXPECTED_IMAGE_LENGTH	1000
-
 // Set GPIO function
 #define DATA_IN					0
 #define DATA_OUT				1
@@ -45,6 +39,41 @@
 
 #define ANTENNA_RELAY_PIN		11
 
+QString	programTypeText[]	=
+{
+	"",
+	"News",
+	"Current Affairs",
+	"Information",
+	"Sport",
+	"Education",
+	"Drama",
+	"Arts",
+	"Science",
+	"Talk",
+	"Pop Music",
+	"Rock Music",
+	"Easy Listening",
+	"Light Classical",
+	"Classical Music",
+	"Other Music",
+	"Weather",
+	"Finance",
+	"Children",
+	"Factual",
+	"Religion",
+	"Phone In",
+	"Travel",
+	"Leisure",
+	"Jazz and Blues",
+	"Country Music",
+	"National Music",
+	"Oldies Music",
+	"Folk Music",
+	"Documentary",
+	"Undefined",
+	"Undefined"
+};
 
 cKeyStoneCOMM::cKeyStoneCOMM(const QString& commPort, QObject *parent) :
 	QObject{parent},
@@ -55,7 +84,10 @@ cKeyStoneCOMM::cKeyStoneCOMM(const QString& commPort, QObject *parent) :
 	m_initialized{false},
 	m_totalProgram{0},
 	m_currentProgram{0},
-	m_mutePrevVolume{0}
+	m_mutePrevVolume{0},
+	m_mainTransportID{0},
+	m_MSCDataIndex{0},
+	m_imageDataIndex{0}
 {
 }
 
@@ -467,6 +499,16 @@ QString cKeyStoneCOMM::programName()
 	return(getProgramName(m_currentMode, m_currentProgram, 1));
 }
 
+QString cKeyStoneCOMM::programType()
+{
+	int8_t	programType	= getProgramType(m_currentMode, m_currentProgram);
+
+	if(programType < 0 || programType > 31)
+		return("");
+
+	return(programTypeText[programType]);
+}
+
 QString cKeyStoneCOMM::programText()
 {
 	return(getProgramText());
@@ -853,7 +895,7 @@ QString cKeyStoneCOMM::getProgramText()
 
 			programText	= QString::fromWCharArray((wchar_t *)&tempBuffer[0], unicodesize-1).trimmed();
 #endif
-			return(0);
+			return(programText);
 
 		}
 		else if((input[1] == 0x00) && (input[2] == 0x02))
@@ -868,6 +910,48 @@ QString cKeyStoneCOMM::getProgramText()
 	}
 	else
 		return(programText);
+}
+
+int8_t cKeyStoneCOMM::getProgramType(char mode, long dabIndex)
+{
+	uint16_t		dwBytes;
+	unsigned char	input[9]		= {0};
+	unsigned char	output[]		= {HEAD,0x01,0x2C,0x01,0x00,0x04,0xFF,0xFF,0xFF,0xFF,END};
+	unsigned char	strChannel[4]	= {0};
+
+	if((mode != STREAM_MODE_DAB) && (mode != STREAM_MODE_FM))
+		return(-1);
+
+	if(mode == STREAM_MODE_DAB)
+	{
+		memcpy(&strChannel[0], &dabIndex, sizeof(long));
+		output[6]	= strChannel[3];
+		output[7]	= strChannel[2];
+		output[8]	= strChannel[1];
+		output[9]	= strChannel[0];
+	}
+
+	if(!writeSerialBytes(output, 11, &dwBytes))
+		return(-1);
+
+	if(dwBytes != 11)
+		return(-1);
+
+	if(!readSerialBytes(input, &dwBytes))
+		return(-1);
+
+	if(dwBytes != 8)
+		return(-1);
+
+	if(goodHeader(input, dwBytes))
+	{
+		if((input[1] == 0x01) && (input[2] == 0x2C))
+			return(input[6]);
+		else
+			return(-1);
+	}
+	else
+		return(-1);
 }
 
 QString cKeyStoneCOMM::getProgramName(char mode, long dabIndex, char namemode)
@@ -980,4 +1064,54 @@ void cKeyStoneCOMM::serialReadError(QSerialPort::SerialPortError error)
 		qDebug() << error;
 #endif
 	}
+}
+
+
+bool cKeyStoneCOMM::clearDatabase()
+{
+	uint16_t		dwBytes;
+	unsigned char	input[8]	= {0};
+	unsigned char	output[]	= {HEAD,0x00,0x01,0x01,0x00,0x01,0x01,END};
+
+	if(!writeSerialBytes(output, 8, &dwBytes))
+		return(false);
+
+	// need to check the return
+	if(!readSerialBytes(input, &dwBytes))
+		return(false);
+	else
+	{
+		if(goodHeader(input, dwBytes))
+		{
+			if(input[2] == 0x01)
+			{
+				QThread::msleep(1000);
+
+//				while(!isSysReady())
+//				{
+//					QThread::msleep(1000);
+//				}
+
+				return(true);
+			}
+			else
+				return(false);
+		}
+		else
+			return(false);
+	}
+
+	return(true);
+}
+
+bool cKeyStoneCOMM::clearFM()
+{
+	return(true);
+}
+
+bool cKeyStoneCOMM::clearDAB()
+{
+	clearDatabase();
+
+	return(true);
 }

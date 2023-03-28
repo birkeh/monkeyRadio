@@ -32,6 +32,7 @@ private slots:
 	void on_m_channelUp_clicked();
 	void on_m_volumeDown_clicked();
 	void on_m_volumeUp_clicked();
+	void on_m_clearDAB_clicked();
 };
 
 #endif // CMAINWINDOW_H
